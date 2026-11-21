@@ -1,0 +1,10 @@
+[
+  {
+    "modid": "${modId}",
+    "name": "${modName}",
+    "description": "Two-dimensional animated player capes for Forge 1.7.10, an unofficial client-side mod for GT New Horizons.",
+    "version": "${modVersion}",
+    "mcversion": "${minecraftVersion}",
+    "authorList": ["WindwovenNH contributors"]
+  }
+]

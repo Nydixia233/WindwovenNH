@@ -1,0 +1,21 @@
+.gradle/
+build/
+run/
+.idea/
+*.iml
+*.log
+hs_err_pid*
+local.properties
+
+# Never add local Prism copies, game files, diagnostics, or generated release packages.
+/.minecraft/
+/instances/
+/saves/
+/screenshots/
+/logs/
+/crash-reports/
+*.args
+*.cfg
+*.zip
+*.jar
+!/gradle/wrapper/gradle-wrapper.jar
