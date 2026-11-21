@@ -22,7 +22,7 @@ try {
         throw "Missing production classes or extra JAR payload: $other"
     }
     $info = (Read-TextEntry $z 'mcmod.info' | ConvertFrom-Json)[0]
-    $name = "$([char]0x98ce)$([char]0x7ec7) $([char]0x00b7) WindwovenNH"
+    $name = 'WindwovenNH'
     if ($info.modid -cne 'windwovennh' -or $info.name -cne $name -or $info.version -cne $version -or $info.description -notmatch 'unofficial') {
         throw 'Incorrect public mod metadata.'
     }

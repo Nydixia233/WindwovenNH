@@ -1,6 +1,10 @@
-# WindwovenNH 0.1.0
+# WindwovenNH 0.1.1
 
-First version under the new name **风织 · WindwovenNH**. This is the same physics as Trailcloth 0.2.2, not a return to the old Trailcloth 0.1.0.
+- The display name is now simply **WindwovenNH**. No changes to cape movement, settings, or the mod ID.
+
+## WindwovenNH 0.1.0
+
+First public version of WindwovenNH.
 
 - Forge ID: `windwovennh`. Replace the old JAR rather than installing both.
 - Copies `trailcloth.cfg` to `windwovennh.cfg` on first use if the latter is absent. Existing new settings win; the old file is kept for rollback.

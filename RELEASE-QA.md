@@ -1,8 +1,16 @@
-# WindwovenNH 0.1.0 — local release validation
+# WindwovenNH release validation
+
+## WindwovenNH 0.1.1 — display name
+
+The production JAR and the GTNH client both report the display name **WindwovenNH**. The tested SHA-256 is `ade2ca30e581237b6435c5e9d7fabe8dc28ddbd959310445acb8a403f8e3e2cd`. In the disposable GTNH 2.9.0 / Java 25 / Angelica 2.2.43 instance, the cape hook drew normally (140 cloth ticks), and the existing configuration was unchanged.
+
+The standalone regression and config checks passed. The two production JARs returned the same 974,724 sampled coordinates, including both distance grids and half-tick interpolation. This patch adds no changes to physics, rendering or configuration. The full performance and network suite below documents 0.1.0; it was not repeated for this name-only patch.
+
+## WindwovenNH 0.1.0 — local release validation
 
 ## Candidate
 
-The built `windwovennh-0.1.0.jar` identifies itself as **风织 · WindwovenNH** (`windwovennh`). SHA-256: `beba5803e6f479bea52a763da2bcae6ce1876898be84c5c0cba54e03eeafd99a`. This is an unofficial rename of Trailcloth 0.2.2, not the historical Trailcloth 0.1.0. The only game-side behavioral additions are config migration and disabling the new cape override if the legacy mod is loaded.
+The tested artifact is `windwovennh-0.1.0.jar` (`windwovennh`). SHA-256: `beba5803e6f479bea52a763da2bcae6ce1876898be84c5c0cba54e03eeafd99a`. This is an unofficial rename of Trailcloth 0.2.2, not the historical Trailcloth 0.1.0. The only game-side behavioral additions are config migration and disabling the new cape override if the legacy mod is loaded.
 
 ## Solver and upgrade
 

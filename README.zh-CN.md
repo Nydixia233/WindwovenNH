@@ -1,14 +1,14 @@
-# 风织 · WindwovenNH
+# WindwovenNH
 
 [English](README.md)
 
-风织让你已有的披风像布一样动。身体转向时，布尾会慢半拍；快速下落时，下摆可能被气流掀起来，停下后再落回去。只转镜头、不转身，披风不会跟着镜头乱甩。
+WindwovenNH 让你已有的披风像布一样动。身体转向时，布尾会慢半拍；快速下落时，下摆可能被气流掀起来，停下后再落回去。只转镜头、不转身，披风不会跟着镜头乱甩。
 
-它不发披风，也不换贴图。原版或 GregTech 本来不显示的披风，装了风织也不会显示。
+它不发披风，也不换贴图。原版或 GregTech 本来不显示的披风，装了 WindwovenNH 也不会显示。
 
 ## 安装
 
-下载 [windwovennh-0.1.0.jar](https://github.com/Nydixia233/WindwovenNH/releases/download/0.1.0/windwovennh-0.1.0.jar)，放进客户端的 `mods` 文件夹。服务器不用装。
+下载 [windwovennh-0.1.1.jar](https://github.com/Nydixia233/WindwovenNH/releases/download/0.1.1/windwovennh-0.1.1.jar)，放进客户端的 `mods` 文件夹。服务器不用装。
 
 实测环境是 **GTNH 2.9.0**（Minecraft Forge 1.7.10）、Java 25，以及整合包自带的 UniMixins 和 Angelica 2.2.43（OpenGL 模式）。关光影和开 Complementary Reimagined + Euphoria Patches 都测过。其他整合包、OptiFine 和其他渲染后端没测过。
 
@@ -30,6 +30,6 @@
 .\gradlew.bat build
 ```
 
-非 Windows 系统可运行 `./gradlew build`。构建后安装 `build/libs/windwovennh-0.1.0.jar`，不要装带 `-dev` 或 `-sources` 后缀的文件。
+非 Windows 系统可运行 `./gradlew build`。构建后安装 `build/libs/windwovennh-0.1.1.jar`，不要装带 `-dev` 或 `-sources` 后缀的文件。
 
-风织是为 GTNH 做的非官方模组。[MIT 许可证](LICENSE)。
+WindwovenNH 是为 GTNH 做的非官方模组。[MIT 许可证](LICENSE)。

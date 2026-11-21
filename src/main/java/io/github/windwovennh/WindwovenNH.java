@@ -9,7 +9,7 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import io.github.windwovennh.client.PlayerCloths;
 import net.minecraftforge.common.config.Configuration;
 
-@Mod(modid = WindwovenNH.ID, name = "\u98ce\u7ec7 \u00b7 WindwovenNH", version = "0.1.0",
+@Mod(modid = WindwovenNH.ID, name = "WindwovenNH", version = "0.1.1",
     acceptedMinecraftVersions = "[1.7.10]", acceptableRemoteVersions = "*")
 public final class WindwovenNH {
     public static final String ID = "windwovennh";
