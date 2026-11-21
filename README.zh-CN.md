@@ -8,7 +8,7 @@
 
 ## 安装
 
-把 **`windwovennh-0.1.0.jar`** 放进客户端的 `mods` 文件夹。服务器不用装。手头没有 JAR 的话，可以按下方步骤自己构建。
+下载 [windwovennh-0.1.0.jar](https://github.com/Nydixia233/WindwovenNH/releases/download/0.1.0/windwovennh-0.1.0.jar)，放进客户端的 `mods` 文件夹。服务器不用装。
 
 实测环境是 **GTNH 2.9.0**（Minecraft Forge 1.7.10）、Java 25，以及整合包自带的 UniMixins 和 Angelica 2.2.43（OpenGL 模式）。关光影和开 Complementary Reimagined + Euphoria Patches 都测过。其他整合包、OptiFine 和其他渲染后端没测过。
 

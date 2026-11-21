@@ -8,7 +8,7 @@ It doesn't give you a cape or change its texture. If Minecraft or GregTech would
 
 ## Install
 
-Put **`windwovennh-0.1.0.jar`** in your client's `mods` folder. The server doesn't need it. If you don't have the JAR, you can [build it below](#build).
+Download [windwovennh-0.1.0.jar](https://github.com/Nydixia233/WindwovenNH/releases/download/0.1.0/windwovennh-0.1.0.jar) and put it in your client's `mods` folder. The server doesn't need it.
 
 Tested on **GT New Horizons 2.9.0** (Minecraft Forge 1.7.10) with Java 25 and the pack's UniMixins and Angelica 2.2.43 in OpenGL mode. The test included shaders off and Complementary Reimagined with Euphoria Patches. Other packs, OptiFine and other rendering backends haven't been tested.
 
