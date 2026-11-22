@@ -87,6 +87,7 @@ tasks.register<Zip>("sourceBundle") {
             include("src/**", "gradle/**", "tools/*.ps1", "tools/*.py", "licenses/**", "gradle.properties",
                 "settings.gradle.kts", "build.gradle.kts", "gradlew", "gradlew.bat",
                 ".java-version", "LICENSE", "*.md")
+            exclude("tools/Invoke-WindwovenNHLab.ps1", "tools/Test-WindwovenNHLoopback.ps1")
             filesMatching("gradlew") { permissions { unix("755") } }
         }
         // Gradle's directory tree excludes VCS metadata by default. These two files are public.

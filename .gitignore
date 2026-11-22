@@ -19,3 +19,7 @@ local.properties
 *.zip
 *.jar
 !/gradle/wrapper/gradle-wrapper.jar
+
+# Local Prism QA launchers: they modify disposable test instances.
+/tools/Invoke-WindwovenNHLab.ps1
+/tools/Test-WindwovenNHLoopback.ps1
