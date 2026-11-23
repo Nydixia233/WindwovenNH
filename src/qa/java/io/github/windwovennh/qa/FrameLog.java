@@ -12,12 +12,14 @@ import java.util.Arrays;
 /** Same recorder in installed and physically uninstalled runs. */
 final class FrameLog {
     private static final String HEADER = "run,scene,capes,frames,width,height,sum_ns,p50_ns,p95_ns,p99_ns,allocated_bytes,"
-        + "tick_ns,draw_ns,step_high,step_low,draw_high,draw_low,far_original";
+        + "tick_ns,draw_ns,step_high,step_low,draw_high,draw_low,far_original,draw_bends";
     private static final String[] COUNTERS = { "tickNanos", "drawNanos", "stepHigh", "stepLow", "drawHigh", "drawLow", "originalDistance" };
     private final Field[] fields = new Field[COUNTERS.length];
     private final long[] initial = new long[fields.length];
     private final long[] intervals = new long[131072];
     private final java.lang.management.ThreadMXBean jvm = ManagementFactory.getThreadMXBean();
+    private final Field bends;
+    private long initialBends;
     private int size;
     private long last, initialAllocation;
 
@@ -25,8 +27,18 @@ final class FrameLog {
     private final Class<?> legacy = load("io.github.trailcloth.client.PlayerCloths");
 
     FrameLog() throws NoSuchFieldException {
+        bends = optionalField(renamed, "drawBends");
         Class<?> tracked = renamed != null ? renamed : legacy;
         if (tracked != null) for (int i = 0; i < fields.length; i++) fields[i] = tracked.getField(COUNTERS[i]);
+    }
+
+    private static Field optionalField(Class<?> type, String name) {
+        if (type == null) return null;
+        try {
+            return type.getField(name);
+        } catch (NoSuchFieldException notInOlderBuild) {
+            return null;
+        }
     }
 
     private static Class<?> load(String name) {
@@ -58,6 +70,7 @@ final class FrameLog {
         size = 0;
         last = 0;
         for (int i = 0; i < fields.length; i++) initial[i] = fields[i] == null ? 0 : fields[i].getLong(null);
+        initialBends = bends == null ? 0 : bends.getLong(null);
         initialAllocation = allocation();
     }
 
@@ -80,6 +93,7 @@ final class FrameLog {
             + quantile(.50) + ',' + quantile(.95) + ',' + quantile(.99) + ','
             + (bytes < 0 ? -1 : bytes - initialAllocation);
         for (int i = 0; i < fields.length; i++) row += "," + (fields[i] == null ? 0 : fields[i].getLong(null) - initial[i]);
+        row += "," + (bends == null ? 0 : bends.getLong(null) - initialBends);
         if (size < 100) throw new IOException("Too few rendered frames: " + size);
         File csv = new File(dir, id + ".csv");
         String text = (csv.exists() ? "" : HEADER + "\n") + row + "\n";

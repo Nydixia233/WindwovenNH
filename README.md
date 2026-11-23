@@ -12,6 +12,8 @@ Download [windwovennh-0.1.1.jar](https://github.com/Nydixia233/WindwovenNH/relea
 
 Tested on **GT New Horizons 2.9.0** (Minecraft Forge 1.7.10) with Java 25 and the pack's UniMixins and Angelica 2.2.43 in OpenGL mode. The test included shaders off and Complementary Reimagined with Euphoria Patches. Other packs, OptiFine and other rendering backends haven't been tested.
 
+**Want to try EvenMoBends support?** Use the [0.1.3 pre-release](https://github.com/Nydixia233/WindwovenNH/releases/tag/0.1.3). It keeps the cape on the shoulders when EvenMoBends animates the player, without making the whole cape tilt with the body. EvenMoBends is optional. On GTNH, Galacticraft may still draw the player instead; WindwovenNH doesn't switch the player renderer or enable body animations. See the [test report](RELEASE-QA.md) for what was tested.
+
 ## Settings
 
 The defaults are fine for most players. To change them, edit `config/windwovennh.cfg` and restart the game:
@@ -30,6 +32,6 @@ Use JDK 25. The first build needs internet access for dependencies.
 ./gradlew build
 ```
 
-On Windows, run `.\gradlew.bat build` instead. The JAR to install is `build/libs/windwovennh-0.1.1.jar`, not the `-dev` or `-sources` JAR.
+On Windows, run `.\gradlew.bat build` instead. Install the plain `windwovennh-<version>.jar` from `build/libs/`, not the `-dev` or `-sources` JAR.
 
 WindwovenNH is an unofficial mod, not part of GT New Horizons. [MIT license](LICENSE).

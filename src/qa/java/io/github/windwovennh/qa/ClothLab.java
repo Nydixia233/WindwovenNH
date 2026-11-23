@@ -23,10 +23,13 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.Render;
+import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.entity.EntityOtherPlayerMP;
 import net.minecraft.client.gui.GuiIngameMenu;
 import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.integrated.IntegratedServer;
@@ -61,6 +64,7 @@ public final class ClothLab {
     private int index, phaseTicks, postLoginTicks, screenTicks, warmup, measure, port;
     private int remoteTicks, timeLimit, passes, reviewView;
     private boolean entered, listening, seenGuest, wantScreenshots, flutterReplay, reviewReplay, verticalReplay, collarReplay, turnReplay, motionReplay;
+    private boolean evenMoBendsRenderer;
     private String shutter;
     private boolean measureLive, showcase, requireLegacyOnly, upgradeWorld;
     private double anchorX, anchorY, anchorZ;
@@ -111,6 +115,7 @@ public final class ClothLab {
         measure = Integer.parseInt(p.getProperty("sampleTicks", "360"));
         passes = Integer.parseInt(p.getProperty("passes", "1"));
         wantScreenshots = Boolean.parseBoolean(p.getProperty("screenshots", "false"));
+        evenMoBendsRenderer = Boolean.parseBoolean(p.getProperty("evenMoBendsRenderer", "false"));
         directory = new File(client.mcDataDir, "windwovennh-lab");
         Files.createDirectories(directory.toPath());
         String[] requested = p.getProperty("scenes", "0,1,24").split(",");
@@ -179,6 +184,7 @@ public final class ClothLab {
             anchorX = Math.floor(client.thePlayer.posX) + 0.5;
             anchorZ = Math.floor(client.thePlayer.posZ) + 0.5;
             anchorY = client.theWorld.getTopSolidOrLiquidBlock((int) anchorX, (int) anchorZ);
+            if (evenMoBendsRenderer) selectEvenMoBendsRenderer();
             atlas = registerSwatch();
             if (motionReplay) placeReplayActor();
             else placeActors();
@@ -212,6 +218,18 @@ public final class ClothLab {
                 conclude("captures complete " + runId);
             }
         }
+    }
+
+    private static void selectEvenMoBendsRenderer() {
+        // Galacticraft registers a more specific renderer for EntityOtherPlayerMP in GTNH.
+        // Exercise the installed EvenMoBends renderer for fixture actors only; leave real players alone.
+        RenderManager manager = RenderManager.instance;
+        Render renderer = manager.getEntityClassRenderObject(EntityPlayer.class);
+        if (renderer == null || !renderer.getClass().getName().equals("net.gobbob.mobends.client.renderer.entity.RenderBendsPlayer")) {
+            throw new IllegalStateException("EvenMoBends is not the registered base player renderer");
+        }
+        manager.entityRenderMap.put(Actor.class, renderer);
+        System.out.println(LOG + "Synthetic actors use the registered EvenMoBends renderer");
     }
 
     private void focus(int count) {

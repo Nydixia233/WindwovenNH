@@ -5,6 +5,7 @@ public final class Flow {
     float airX, airY, airZ;
     float yawStep;
     boolean submerged;
+    CapeFrame frame;
     public float shoulder;
     public float squat;
 
@@ -16,9 +17,16 @@ public final class Flow {
         airY = limit(20 * dy, 80);
         airZ = limit(20 * (dz * cos - dx * sin), 26);
         yawStep = limit(Math.toRadians(turnDegrees), (float) Math.PI);
+        frame = null;
         this.submerged = submerged;
         shoulder = (armored ? 0.096F : 0.021F) + (crouching ? 0.025F : 0);
         squat = crouching ? 1.0F : 0;
+    }
+
+    public void pose(CapeFrame frame) {
+        this.frame = frame;
+        // The actual torso pose already includes the crouch; don't tilt its contact ramp twice.
+        squat = 0;
     }
 
     private static float limit(double value, float max) {

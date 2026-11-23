@@ -1,5 +1,25 @@
 # WindwovenNH release validation
 
+## WindwovenNH 0.1.3 — posed torso preview
+
+Tested JAR SHA-256: `e2bfbbb88a35bf8392df7d724f41564942da5289c1bea0d9dd8420d161aa4ba7`. The solver projects gravity, air and acceleration into the animated torso's frame; the shoulder seam and collision proxy remain attached to the body. The normal cape path gives 974,724 bit-identical solver coordinates against 0.1.1. The offline tests also cover a 70-degree tilted drape and rapid pitch/yaw/roll transitions in both grids, including pinned shoulders, chest clearance and finite interpolated links.
+
+In the full GTNH 2.9.0 / Java 25 / Angelica 2.2.43 preview copy, with EvenMoBends `0.0.3-gtnh-preview.1` and shaders off, a real local player reached a 70-degree forward flight pose. The compatibility hook recorded 862 local cape draws over 45 degrees of torso tilt. Equipping and removing Galacticraft oxygen gear still changed the renderer as expected. This check does not requalify shaders, multiplayer, or overall frame-time performance for 0.1.3.
+
+### Earlier adapter checks (development build 0.1.2)
+
+Earlier development JAR: `windwovennh-0.1.2.jar`, SHA-256 `5c1b74224f1284431dfc061f6609424039ccfc768d8da4683c6598a6108c7a53`. Offline build, artifact checks, and cloth/config regressions passed. Against the public 0.1.1 JAR, all 974,724 solver coordinates matched bit-for-bit across both grids, including half-tick samples. The compatibility changes only affect the cape draw path.
+
+The game tests used a disposable GTNH 2.9.0 / Java 25 / Angelica 2.2.43 instance. With the default GTNH renderer registration, Galacticraft handled the fixture's player class and WindwovenNH still drew through its original hook. To actually exercise EvenMoBends, the separate QA fixture routed only the synthetic actors to the installed EvenMoBends renderer. The production mod does not change renderer selection.
+
+- EvenMoBends 0.0.3 with Salamander `727fc6c-snapshot`, shaders off: 2,276 and 7,420 cloth draws through the EvenMoBends adapter in the one- and six-actor captures, respectively. The empty scene drew no cloth. The captures showed the asymmetric test cape, GregTech cape and a chestplate; hidden or invisible actors did not acquire a visible cape.
+
+- EvenMoBends `ad96976-snapshot` with Salamander `5dc2a21-snapshot`, Complementary Reimagined r5.9.3 + Euphoria Patches 1.10.5: 2,290 and 6,160 cloth draws through the adapter in the same two scenes. The empty scene drew no cloth. In the reviewed captures, both cape textures were visible and there was no obvious duplicate cape, atlas reversal, or displaced shadow.
+
+- With WindwovenNH disabled, EvenMoBends' regular cape was still visible and the cloth counters stayed at zero. With EvenMoBends and Salamander removed, WindwovenNH used its original draw hook in the one- and six-actor scenes, with no EvenMoBends draws and no cloth draws in the empty scene.
+
+These earlier checks do not qualify the 0.1.3 JAR.
+
 ## WindwovenNH 0.1.1 — display name
 
 The production JAR and the GTNH client both report the display name **WindwovenNH**. The tested SHA-256 is `ade2ca30e581237b6435c5e9d7fabe8dc28ddbd959310445acb8a403f8e3e2cd`. In the disposable GTNH 2.9.0 / Java 25 / Angelica 2.2.43 instance, the cape hook drew normally (140 cloth ticks), and the existing configuration was unchanged.
