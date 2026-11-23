@@ -19,6 +19,7 @@ public final class ClothChecks {
             movingTurn(density);
             stationaryTurn(density);
             jumpAndLand(density);
+            tiltedTorso(density);
             ledgeFall(density);
             verticalFlight(density);
             sustainedDive(density);
@@ -56,6 +57,52 @@ public final class ClothChecks {
         BodyContact.projectHead(original, 3, BodyContact.HEAD_TOP, BodyContact.HEAD_BOTTOM, 0, .098F);
         close(original[4], 0, 1e-7F, "a short link near the collar cannot reach the back of the head");
         expect(Math.abs(original[5] - original[2]) <= .09801F, "head contact does not lengthen the collar link");
+    }
+
+    private static void tiltedTorso(Density density) {
+        CapeFrame root = new CapeFrame(), pose = new CapeFrame();
+        root.setRoot(70, 0, 0);
+        expect(pose.fromBone(root, 1.3F, 0, 0, 0, 1.1F, 0, 0, 0, .7F), "valid scaled rig basis");
+        float down = pose.localY(0, 1, 0), rear = pose.localZ(0, 1, 0);
+        close(pose.toY(0, down, rear), 1, 1e-6F, "tilted world down round trip");
+        close(pose.toZ(0, down, rear), 0, 1e-6F, "world down is not body forward");
+        expect(!pose.fromBone(root, 1, 0, 0, 1, 0, 0, 0, 0, 1), "reject singular body transforms");
+        expect(!pose.fromBone(root, 1, 0, 0, 0, 1, 0, 0, 0, -1), "reject mirrored body transforms");
+        expect(!pose.fromBone(root, Float.NaN, 0, 0, 0, 1, 0, 0, 0, 1), "reject non-finite body transforms");
+        root.setRoot(-70, 0, 0); // Nearly horizontal, with clear air in the direction of gravity.
+        Flow wind = new Flow();
+        wind.update(0, 0, 0, 0, 0, false, false, false);
+        wind.pose(root);
+        WovenCloth cloth = new WovenCloth();
+        cloth.initialize(density, wind);
+        for (int tick = 0; tick < 100; tick++) cloth.advance(wind);
+        expect(cloth.sample(1, SAMPLED), "finite tilted drape");
+        int hem = 3 * (density.sites - (density.columns + 1) / 2);
+        float localDrop = SAMPLED[hem + 1], localRear = SAMPLED[hem + 2] - wind.shoulder;
+        float worldDrop = root.toY(0, localDrop, localRear);
+        expect(worldDrop > .8F && localRear > .65F,
+            "hem follows downward gravity instead of turning rigidly with the body: " + worldDrop + ", " + localRear);
+
+        // Sprint-jump into a near-horizontal forward flight, then reverse and level out.
+        for (int tick = 0; tick < 125; tick++) {
+            float pitch = tick < 55 ? -70 + tick * (148F / 54) : 78 - 78 * (tick - 55) / 69;
+            root.setRoot(pitch, 12 * (float) Math.sin(tick * .09), 18 * (float) Math.sin(tick * .17));
+            wind.update(.07, tick < 8 ? .20 : tick < 55 ? .02 : -.20, tick < 90 ? .42 : -.35,
+                0, 0, false, false, true);
+            wind.pose(root);
+            cloth.advance(wind);
+            expect(cloth.sample(.5F, SAMPLED), "finite interpolated frame through jump/flight/landing");
+            for (int c = 0; c < density.columns; c++) {
+                close(SAMPLED[c * 3 + 1], 0, 0, "tilt keeps the shoulder seam pinned");
+                close(SAMPLED[c * 3 + 2], wind.shoulder, 1e-6F, "tilt keeps chestplate shoulder clearance");
+            }
+            for (int i = density.columns * 3; i < density.sites * 3; i += 3) {
+                expect(SAMPLED[i + 2] >= wind.shoulder - 1e-6F, "tilt keeps cloth outside the torso");
+                expect(distance(i, i - density.columns * 3) * (density.rows - 1) < 1.36,
+                    "tilt preserves link lengths in " + density + " at tick " + tick);
+            }
+        }
+        System.out.printf(Locale.ROOT, "%s tilted drape: world drop %.3f blocks at 70 degrees%n", density, worldDrop);
     }
 
     private static void standAndRun(Density d) {

@@ -41,6 +41,11 @@ final class ModelSpace implements ClothSurface.VertexOut {
         drop = sneak ? 0.018F : 0.0F;
     }
 
+    void atAttachment() {
+        sp = sr = sy = drop = 0;
+        cp = cr = cy = 1;
+    }
+
     void outputTo(Tessellator batch) {
         this.batch = batch;
     }

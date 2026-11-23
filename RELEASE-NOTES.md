@@ -1,5 +1,11 @@
 # WindwovenNH release notes
 
+## 0.1.3 (pre-release)
+
+Added optional EvenMoBends cape support ([#1](https://github.com/Nydixia233/WindwovenNH/issues/1)). The cape stays attached to the shoulders when the player leans into jumps or flies, but gravity and wind don't tilt with the body. Existing cape textures, visibility, and settings are unchanged. If EvenMoBends isn't installed, the usual WindwovenNH cape path still works.
+
+WindwovenNH does not replace the player renderer or enable EvenMoBends body animations. See the [test report](RELEASE-QA.md) for what's been verified in this preview.
+
 ## 0.1.1
 
 The in-game display name is now **WindwovenNH**. Cape movement, settings, and the mod ID are unchanged.

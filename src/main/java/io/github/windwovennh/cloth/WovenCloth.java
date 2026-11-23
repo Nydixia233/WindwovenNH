@@ -26,6 +26,8 @@ public final class WovenCloth {
     private float hemWindX, hemWindY, hemWindZ;
     private double time;
     private float gustX, gustY;
+    private CapeFrame lastPose, relativePose;
+    private boolean posed;
 
     public WovenCloth() {
         this(0);
@@ -49,6 +51,11 @@ public final class WovenCloth {
         weave = geometry(density);
         aX = aY = aZ = hemWindX = hemWindY = hemWindZ = gustX = gustY = 0;
         time = 0;
+        posed = flow.frame != null;
+        if (posed) {
+            ensurePose();
+            lastPose.copy(flow.frame);
+        }
         shoulder = flow.shoulder;
         squat = flow.squat;
         int width = density.columns;
@@ -115,6 +122,7 @@ public final class WovenCloth {
         contactAll();
         System.arraycopy(position, 0, lastTick, 0, d.sites * 3);
         carryYaw(flow);
+        carryPose(flow.frame);
         AeroPreset model = weave.air;
         float dx = (flow.airX - aX) * model.follow;
         float dy = (flow.airY - aY) * model.follow;
@@ -130,7 +138,7 @@ public final class WovenCloth {
         float inertiaX = capped(dx * kick, 27), inertiaY = capped(dy * verticalKick, 62), inertiaZ = capped(dz * kick, 35);
         flowGust(flow.submerged);
         for (int sub = 0; sub < 2; sub++) {
-            predict(flow.submerged, inertiaX, inertiaY, inertiaZ);
+            predict(flow.submerged, inertiaX, inertiaY, inertiaZ, flow.frame);
             for (int pass = 0; pass < 7; pass++) {
                 // Alternate directions so the two selvages do not acquire opposite numerical biases.
                 if ((pass & 1) == 0) {
@@ -146,6 +154,43 @@ public final class WovenCloth {
                 contactAll();
             }
         }
+    }
+
+    private void ensurePose() {
+        if (lastPose == null) {
+            lastPose = new CapeFrame();
+            relativePose = new CapeFrame();
+        }
+    }
+
+    private void carryPose(CapeFrame next) {
+        if (next == null && !posed) return;
+        if (next != null && posed && !next.same(lastPose)) {
+            relativePose.fromPrevious(next, lastPose);
+            Density d = weave.density;
+            for (int r = 1; r < d.rows; r++) {
+                float weight = weave.fractionDown[r];
+                for (int c = 0; c < d.columns; c++) {
+                    int i = (r * d.columns + c) * 3;
+                    float pivotX = weave.restX[c];
+                    carryPoseNode(position, i, pivotX, weight);
+                    carryPoseNode(verlet, i, pivotX, weight);
+                }
+            }
+        }
+        if (next != null) {
+            ensurePose();
+            lastPose.copy(next);
+        }
+        // Changing renderer is not a physical body rotation.
+        posed = next != null;
+    }
+
+    private void carryPoseNode(float[] v, int i, float pivotX, float weight) {
+        float x = v[i] - pivotX, y = v[i + 1], z = v[i + 2] - shoulder;
+        v[i] += (relativePose.toX(x, y, z) - x) * weight;
+        v[i + 1] += (relativePose.toY(x, y, z) - y) * weight;
+        v[i + 2] += (relativePose.toZ(x, y, z) - z) * weight;
     }
 
     private void carryYaw(Flow flow) {
@@ -205,7 +250,7 @@ public final class WovenCloth {
         data[i + 2] = pz + sin * x + cos * z;
     }
 
-    private void predict(boolean submerged, float inertiaX, float inertiaY, float inertiaZ) {
+    private void predict(boolean submerged, float inertiaX, float inertiaY, float inertiaZ, CapeFrame pose) {
         Density d = weave.density;
         AeroPreset model = weave.air;
         int stride = d.columns * 3, across = stride - 3;
@@ -214,6 +259,9 @@ public final class WovenCloth {
         float tangentDrag = model.tangent * medium;
         float retention = submerged ? weave.wetRetention : weave.retention;
         float gravity = submerged ? 12.0F : 31.36F;
+        float gravityX = pose == null ? 0 : pose.localX(0, gravity, 0);
+        float gravityY = pose == null ? gravity : pose.localY(0, gravity, 0);
+        float gravityZ = pose == null ? 0 : pose.localZ(0, gravity, 0);
         float shieldedWind = capped(model.verticalAir * aY, 4.4F);
         float openWind = capped(model.openAir * hemWindY, 21);
         float wake = .12F + model.wake * (submerged ? .65F : 1) * Math.min(24, Math.max(-aY, 0));
@@ -232,6 +280,13 @@ public final class WovenCloth {
             // The open-air wake is not a water model; retain the sheltered, damped response there.
             float opening = submerged ? 0 : BodyContact.wakeOpening(position[center + 2] - contact(downAtCenter));
             float ry = mix(shieldedWind * exposure, openWind, opening) + gustY;
+            // The flow history is in upright yaw space; move its drag input into the posed torso frame.
+            if (pose != null) {
+                rz -= wake;
+                float x = pose.localX(rx, ry, rz), y = pose.localY(rx, ry, rz);
+                rz = pose.localZ(rx, ry, rz) + wake;
+                rx = x; ry = y;
+            }
             // The average spanning direction and centerline tangent give one pressure patch per row.
             float sx = position[last] - position[start], sy = position[last + 1] - position[start + 1];
             float sz = position[last + 2] - position[start + 2];
@@ -248,7 +303,17 @@ public final class WovenCloth {
             // Share tangent speed across the row, but damp each node relative to its own velocity.
             float kt = tangentDrag * (float) Math.sqrt(tx0 * tx0 + ty0 * ty0 + tz0 * tz0);
             float tangent = H2 * kt / (1 + H * kt);
-            float ax0 = H2 * inertiaX * (1 - .65F * drop), ay0 = H2 * (gravity + inertiaY), az0 = H2 * inertiaZ;
+            float ax0, ay0, az0;
+            if (pose == null) {
+                ax0 = H2 * inertiaX * (1 - .65F * drop);
+                ay0 = H2 * (gravity + inertiaY);
+                az0 = H2 * inertiaZ;
+            } else {
+                float lateral = inertiaX * (1 - .65F * drop);
+                ax0 = H2 * (gravityX + pose.localX(lateral, inertiaY, inertiaZ));
+                ay0 = H2 * (gravityY + pose.localY(lateral, inertiaY, inertiaZ));
+                az0 = H2 * (gravityZ + pose.localZ(lateral, inertiaY, inertiaZ));
+            }
             for (int i = start; i < start + stride; i += 3) {
                 float x = position[i], y = position[i + 1], z = position[i + 2];
                 float vx = x - verlet[i], vy = y - verlet[i + 1], vz = z - verlet[i + 2];

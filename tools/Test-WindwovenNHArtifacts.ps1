@@ -13,12 +13,14 @@ function Read-TextEntry($Zip, [string]$Name) {
 }
 $z = [IO.Compression.ZipFile]::OpenRead($jar)
 try {
-    $classes = '^io/github/windwovennh/(WindwovenNH|LegacyConfig|client/(ModelSpace|PlayerCloths(\$Garment)?)|cloth/(AeroPreset|BodyContact|ClothSurface(\$VertexOut)?|Density|Flow|WovenCloth(\$(Seam|Weave))?)|mixin/(CapeCall|BatchStatus))\.class$'
+    $classes = '^io/github/windwovennh/(WindwovenNH|LegacyConfig|client/(BendsAttachment(\$Links)?|ModelSpace|PlayerCloths(\$Garment)?)|cloth/(AeroPreset|BodyContact|CapeFrame|ClothSurface(\$VertexOut)?|Density|Flow|WovenCloth(\$(Seam|Weave))?)|mixin/(CapeCall|BatchStatus|EvenMoBendsCapeCall))\.class$'
     $resources = @('META-INF/MANIFEST.MF','META-INF/LICENSE','mcmod.info','mixins.windwovennh.json','mixins.windwovennh.refmap.json')
     $files = @($z.Entries | Where-Object Name | ForEach-Object FullName)
     $other = @($files | Where-Object { $_ -cnotmatch $classes -and $_ -cnotin $resources })
     if ($other.Count -or 'io/github/windwovennh/WindwovenNH.class' -cnotin $files -or
-        'io/github/windwovennh/LegacyConfig.class' -cnotin $files -or 'io/github/windwovennh/mixin/CapeCall.class' -cnotin $files) {
+        'io/github/windwovennh/LegacyConfig.class' -cnotin $files -or 'io/github/windwovennh/mixin/CapeCall.class' -cnotin $files -or
+        'io/github/windwovennh/mixin/EvenMoBendsCapeCall.class' -cnotin $files -or
+        'io/github/windwovennh/client/BendsAttachment.class' -cnotin $files) {
         throw "Missing production classes or extra JAR payload: $other"
     }
     $info = (Read-TextEntry $z 'mcmod.info' | ConvertFrom-Json)[0]
@@ -28,7 +30,7 @@ try {
     }
     if ((Read-TextEntry $z 'META-INF/MANIFEST.MF') -notmatch '(?m)^MixinConfigs: mixins\.windwovennh\.json\r?$') { throw 'Wrong Mixin manifest.' }
     $mixin = Read-TextEntry $z 'mixins.windwovennh.json' | ConvertFrom-Json
-    if ($mixin.package -cne 'io.github.windwovennh.mixin' -or $mixin.refmap -cne 'mixins.windwovennh.refmap.json' -or
+    if ('EvenMoBendsCapeCall' -cnotin $mixin.client -or $mixin.package -cne 'io.github.windwovennh.mixin' -or $mixin.refmap -cne 'mixins.windwovennh.refmap.json' -or
         (Read-TextEntry $z 'mixins.windwovennh.refmap.json') -match 'io[/\.]github[/\.]trailcloth') { throw 'Wrong Mixin namespace/refmap.' }
     $license = Get-Content -LiteralPath (Join-Path $root 'LICENSE') -Raw
     if ((Read-TextEntry $z 'META-INF/LICENSE').Trim() -cne $license.Trim()) { throw 'Incorrect copyright/license payload' }
@@ -55,4 +57,4 @@ try {
         if ((Read-TextEntry $z $n) -match $private) { throw "Personal path or possible credential in $n" }
     }
 } finally { $z.Dispose() }
-'PASS: renamed production metadata, clean JAR, and public-source payload'
+'PASS: production metadata, clean JAR, and public-source payload'
