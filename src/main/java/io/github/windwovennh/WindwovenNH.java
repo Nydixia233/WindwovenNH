@@ -9,7 +9,7 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import io.github.windwovennh.client.PlayerCloths;
 import net.minecraftforge.common.config.Configuration;
 
-@Mod(modid = WindwovenNH.ID, name = "WindwovenNH", version = "0.1.3",
+@Mod(modid = WindwovenNH.ID, name = "WindwovenNH", version = "0.1.7",
     acceptedMinecraftVersions = "[1.7.10]", acceptableRemoteVersions = "*")
 public final class WindwovenNH {
     public static final String ID = "windwovennh";
@@ -38,8 +38,11 @@ public final class WindwovenNH {
         String quality = settings.getString("quality", "cloth", "BALANCED",
             "BALANCED: 5x13 within 24 blocks, 3x7 within 48, original cape farther away. FULL: 5x13 at every distance. Restart to apply.",
             new String[] { "BALANCED", "FULL" });
+        float windStrength = settings.getFloat("windStrength", "cloth", 1.0F, 0.0F, 3.0F,
+            "Wind strength. 0 disables external wind; 1 is standard; try 1.3-1.8 for more movement. Restart to apply.");
+        if (Float.isNaN(windStrength)) windStrength = 1.0F;
         if (settings.hasChanged()) settings.save();
-        if (enabled) PlayerCloths.enable("FULL".equals(quality));
-        event.getModLog().info("WindwovenNH: enabled={}, quality={}", enabled, quality);
+        if (enabled) PlayerCloths.enable("FULL".equals(quality), windStrength);
+        event.getModLog().info("WindwovenNH: enabled={}, quality={}, windStrength={}", enabled, quality, windStrength);
     }
 }

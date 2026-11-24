@@ -25,7 +25,7 @@ public final class WovenCloth {
     private float aX, aY, aZ; // filtered player-relative air in the current body frame
     private float hemWindX, hemWindY, hemWindZ;
     private double time;
-    private float gustX, gustY;
+    private float gustX, gustY, flightWake;
     private CapeFrame lastPose, relativePose;
     private boolean posed;
 
@@ -50,6 +50,7 @@ public final class WovenCloth {
     public void initialize(Density density, Flow flow) {
         weave = geometry(density);
         aX = aY = aZ = hemWindX = hemWindY = hemWindZ = gustX = gustY = 0;
+        flightWake = 0;
         time = 0;
         posed = flow.frame != null;
         if (posed) {
@@ -136,9 +137,10 @@ public final class WovenCloth {
         // A rapid change of attachment speed can unload the sheet; don't amplify gravity in Y.
         float verticalKick = 20 * Math.min(1, model.inertia) * (flow.submerged ? .45F : 1);
         float inertiaX = capped(dx * kick, 27), inertiaY = capped(dy * verticalKick, 62), inertiaZ = capped(dz * kick, 35);
-        flowGust(flow.submerged);
+        flightWake = mix(flightWake, flow.flightWake, .26F);
+        flowGust(flow.submerged, flow.windStrength);
         for (int sub = 0; sub < 2; sub++) {
-            predict(flow.submerged, inertiaX, inertiaY, inertiaZ, flow.frame);
+            predict(flow, inertiaX, inertiaY, inertiaZ);
             for (int pass = 0; pass < 7; pass++) {
                 // Alternate directions so the two selvages do not acquire opposite numerical biases.
                 if ((pass & 1) == 0) {
@@ -216,12 +218,13 @@ public final class WovenCloth {
         carryTurn((float) Math.sin(retained), (float) Math.cos(retained) - 1.0F, bodyPivot);
     }
 
-    private void flowGust(boolean submerged) {
+    private void flowGust(boolean submerged, float airScale) {
         // Ambient disturbance is a velocity in the wake, not a prescribed animation or a vertex offset.
         time += .05;
         float speedSquared = aX * aX + aY * aY + aZ * aZ;
         if (speedSquared < 9) { gustX = gustY = 0; return; }
-        float strength = Math.min(1.4F, ((float) Math.sqrt(speedSquared) - 3) * .055F) * (submerged ? .36F : 1);
+        float strength = Math.min(1.4F, ((float) Math.sqrt(speedSquared) - 3) * .055F)
+            * (submerged ? .36F : 1) * airScale;
         double phase = (seed & 0xffff) * .31;
         gustX = strength * (float) (.64 * Math.sin(time * 13 + phase) + .36 * Math.sin(time * 23.7));
         gustY = .31F * strength * (float) Math.cos(time * 17 + (seed & 0xffff) * .17);
@@ -250,10 +253,12 @@ public final class WovenCloth {
         data[i + 2] = pz + sin * x + cos * z;
     }
 
-    private void predict(boolean submerged, float inertiaX, float inertiaY, float inertiaZ, CapeFrame pose) {
+    private void predict(Flow flow, float inertiaX, float inertiaY, float inertiaZ) {
+        CapeFrame pose = flow.frame;
         Density d = weave.density;
         AeroPreset model = weave.air;
         int stride = d.columns * 3, across = stride - 3;
+        boolean submerged = flow.submerged;
         float medium = submerged ? .36F : 1;
         float normalDrag = model.normal * medium;
         float tangentDrag = model.tangent * medium;
@@ -262,13 +267,17 @@ public final class WovenCloth {
         float gravityX = pose == null ? 0 : pose.localX(0, gravity, 0);
         float gravityY = pose == null ? gravity : pose.localY(0, gravity, 0);
         float gravityZ = pose == null ? 0 : pose.localZ(0, gravity, 0);
+        float airScale = flow.windStrength;
         float shieldedWind = capped(model.verticalAir * aY, 4.4F);
         float openWind = capped(model.openAir * hemWindY, 21);
-        float wake = .12F + model.wake * (submerged ? .65F : 1) * Math.min(24, Math.max(-aY, 0));
+        float wake = (.12F + model.wake * (submerged ? .65F : 1) * Math.min(24, Math.max(-aY, 0))) * airScale;
+        // Flying has a small bounded wake even when the player is hovering. Actual movement
+        // still adds to it, so fast flight opens the cloth without turning flight into a preset animation.
+        if (flightWake != 0) wake += flightWake * medium;
         for (int row = 1; row < d.rows; row++) {
             float drop = weave.fractionDown[row];
-            float rx = mix(aX, hemWindX, drop) + gustX;
-            float rz = mix(aZ, hemWindZ, drop * .68F) + wake;
+            float rx = mix(aX, hemWindX, drop) * airScale + gustX;
+            float rz = mix(aZ, hemWindZ, drop * .68F) * airScale + wake;
             int start = row * stride;
             int previous = start - stride;
             int last = start + across;
@@ -279,7 +288,7 @@ public final class WovenCloth {
             float exposure = .45F + .55F * Math.max(0, Math.min(1, downAtCenter * (1F / .78F)));
             // The open-air wake is not a water model; retain the sheltered, damped response there.
             float opening = submerged ? 0 : BodyContact.wakeOpening(position[center + 2] - contact(downAtCenter));
-            float ry = mix(shieldedWind * exposure, openWind, opening) + gustY;
+            float ry = mix(shieldedWind * exposure, openWind, opening) * airScale + gustY;
             // The flow history is in upright yaw space; move its drag input into the posed torso frame.
             if (pose != null) {
                 rz -= wake;

@@ -53,17 +53,19 @@ public final class ClothLab {
     private static final int JUMP = 77, RUN_JUMP = 125, POWERED_START = 176, POWERED_END = 199;
     private static final int FREE_FALL = 219, VERTICAL_END = 284;
     private static final int COLLAR_HOP = 72, COLLAR_FALL = 111, COLLAR_BRAKE = 157, COLLAR_REST = 173, COLLAR_END = 215;
+    private static final int WIND_END = 356;
     private static final int TURN_START = 112, TURN_STOP = 136, TURN_REVERSE = 166, TURN_END = 219;
     private final Minecraft client = Minecraft.getMinecraft();
     private final Actor[] inScene = new Actor[24];
     private FrameLog recorder;
+    private WindTrace windTrace;
     private Properties labSettings;
     private File directory;
     private String runId, mode;
     private int[] scenes;
     private int index, phaseTicks, postLoginTicks, screenTicks, warmup, measure, port;
     private int remoteTicks, timeLimit, passes, reviewView;
-    private boolean entered, listening, seenGuest, wantScreenshots, flutterReplay, reviewReplay, verticalReplay, collarReplay, turnReplay, motionReplay;
+    private boolean entered, listening, seenGuest, wantScreenshots, flutterReplay, reviewReplay, verticalReplay, collarReplay, turnReplay, windReplay, motionReplay;
     private boolean evenMoBendsRenderer;
     private String shutter;
     private boolean measureLive, showcase, requireLegacyOnly, upgradeWorld;
@@ -103,7 +105,9 @@ public final class ClothLab {
         verticalReplay = "vertical".equals(mode);
         collarReplay = "collar".equals(mode);
         turnReplay = "turn".equals(mode);
-        motionReplay = flutterReplay || reviewReplay || verticalReplay || collarReplay || turnReplay || "flight".equals(mode);
+        windReplay = "wind".equals(mode);
+        if (windReplay) windTrace = new WindTrace();
+        motionReplay = flutterReplay || reviewReplay || verticalReplay || collarReplay || turnReplay || windReplay || "flight".equals(mode);
         if (!"capture".equals(mode) && !showcase && !"startup".equals(mode) && !motionReplay
             && !"host".equals(mode) && !"guest".equals(mode)) {
             throw new IOException("Invalid lab mode");
@@ -238,8 +242,8 @@ public final class ClothLab {
     }
 
     private void placeReplayActor() {
-        int height = collarReplay ? 140 : (verticalReplay || turnReplay) ? 0 : reviewReplay ? 25 : flutterReplay ? 3 : 10;
-        int feature = turnReplay ? 11 : collarReplay ? 10 : verticalReplay ? 9 : reviewReplay ? 8 : flutterReplay ? 7 : 6;
+        int height = collarReplay ? 140 : (verticalReplay || turnReplay || windReplay) ? 0 : reviewReplay ? 25 : flutterReplay ? 3 : 10;
+        int feature = turnReplay ? 11 : collarReplay ? 10 : verticalReplay ? 9 : reviewReplay ? 8 : flutterReplay ? 7 : windReplay ? 12 : 6;
         Actor actor = new Actor(client.theWorld, anchorX, anchorY + height, anchorZ + 6.6, 0, feature, atlas);
         if (!collarReplay || reviewView == 1) actor.setCurrentItemOrArmor(3, new ItemStack(Items.iron_chestplate));
         if (collarReplay && reviewView == 1) actor.setCurrentItemOrArmor(4, new ItemStack(Items.iron_helmet));
@@ -250,7 +254,12 @@ public final class ClothLab {
 
     private void updateMotionReplay(Actor subject) throws IOException, IllegalAccessException {
         // Follow the actor in both histories so the mesh, not the camera, moves in the comparison.
-        if (reviewReplay || collarReplay || turnReplay) {
+        if (windReplay) {
+            double yaw = Math.toRadians(subject.renderYawOffset + 52);
+            double x = -3.4 * Math.sin(yaw), z = 3.4 * Math.cos(yaw);
+            focusCamera(subject.posX - x, subject.posY + .93, subject.posZ - z,
+                subject.posY + .93, subject.posZ - z, subject.renderYawOffset + 52, 0);
+        } else if (reviewReplay || collarReplay || turnReplay) {
             focusReviewCamera(subject);
         } else if (flutterReplay) {
             focusCamera(subject.posX - 2.50, subject.posY + 0.99, subject.posZ - 2.65,
@@ -263,6 +272,7 @@ public final class ClothLab {
         int tick = subject.flightAge;
         if (tick == phaseTicks) return;
         phaseTicks = tick;
+        if (windReplay && tick >= 60 && tick < WIND_END) windTrace.capture(tick, windStage(tick), subject);
         if (tick == 60) {
             recorder.reset();
             measureLive = true;
@@ -296,6 +306,9 @@ public final class ClothLab {
                 if (tick >= FLUTTER_CAPTURE_START && tick < FLUTTER_END && (tick & 1) == 0) shutter = "frame" + tick;
                 if (tick == 76) shutter = "idle";
                 if (tick == FLUTTER_END + 30) shutter = "stopped";
+            } else if (windReplay) {
+                if (tick == 75 || tick == 109 || tick == 145 || tick == 184 || tick == 224 || tick == 264
+                    || tick == 292 || tick == 319 || tick == 331 || tick == 350) shutter = windStage(tick) + "-t" + tick;
             } else {
                 if (tick == 76) shutter = "hover";
                 if (tick == FLIGHT_START + 14) shutter = "climb";
@@ -304,8 +317,9 @@ public final class ClothLab {
                 if (tick == DIVE_END + 4) shutter = "dive-stop";
             }
         }
-        if (tick == (turnReplay ? TURN_END : collarReplay ? COLLAR_END : verticalReplay ? VERTICAL_END : reviewReplay ? REVIEW_END : 215)) {
+        if (tick == (turnReplay ? TURN_END : collarReplay ? COLLAR_END : verticalReplay ? VERTICAL_END : reviewReplay ? REVIEW_END : windReplay ? WIND_END : 215)) {
             measureLive = false;
+            if (windReplay) windTrace.finish(directory, runId);
             int sampleIndex = showcase ? scenes.length + (turnReplay ? 1 : 2 + reviewView) : reviewView + 1;
             System.out.println(LOG + recorder.write(directory, runId, sampleIndex, 1, client.displayWidth, client.displayHeight));
             if (showcase && turnReplay) {
@@ -325,6 +339,12 @@ public final class ClothLab {
         client.theWorld.setWorldTime(4000);
         client.theWorld.setRainStrength(0);
         client.theWorld.setThunderStrength(0);
+    }
+
+    private static String windStage(int t) {
+        return t < 80 ? "idle" : t < 116 ? "walk" : t < 151 ? "sprint" : t < 190 ? "hover"
+            : t < 230 ? "slow-flight" : t < 270 ? "fast-flight" : t < 300 ? "climb"
+            : t < 324 ? "descent" : t < 338 ? "flight-turn" : "stop";
     }
 
     private void focusReviewCamera(Actor actor) {
@@ -503,6 +523,20 @@ public final class ClothLab {
             }
             if (check == 8) {
                 advanceReview();
+                return;
+            }
+            if (check == 12) {
+                int t = ++flightAge;
+                capabilities.isFlying = t >= 151 && t < 338;
+                onGround = t < 151 || t >= 346;
+                setSprinting(t >= 116 && t < 151);
+                float yaw = 12 * Math.max(0, Math.min(12, t - 321));
+                double forward = t < 80 ? 0 : t < 116 ? .20 : t < 151 ? .28
+                    : t < 190 ? 0 : t < 230 ? .12 : t < 270 ? .65 : t < 338 ? .12 : 0;
+                double vertical = t >= 151 && t < 161 ? .35 : t >= 270 && t < 300 ? .16
+                    : t >= 300 && t < 324 ? -.22 : t >= 338 ? -Math.min(.45, Math.max(0, posY - baseY)) : 0;
+                double radians = Math.toRadians(yaw);
+                moveReplay(-Math.sin(radians) * forward, vertical, Math.cos(radians) * forward, yaw);
                 return;
             }
             if (check == 7) {

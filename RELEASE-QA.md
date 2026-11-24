@@ -1,5 +1,35 @@
 # WindwovenNH release validation
 
+## WindwovenNH 0.1.7 — public preview
+
+Tested JAR SHA-256: `6ebd7527744451a9b1c844c49454195df6dea78c7209254e235a8231c52568b0`. In a controlled armored descent with wind strength 1.5 and a 35-degree torso tilt, the peak near-grid bend measured 26.8 degrees, down from 46.3 degrees in 0.1.6. Both grids passed the tests for lift and settling, anchored shoulders, warp stretch and standard helmet clearance. The standalone allocation check still measured zero bytes over 1,500 warmed tick-and-mesh iterations.
+
+The Java 25 / Forge 1.7.10 / UniMixins 0.3.2 replay with EvenMoBends `ad96976-snapshot` confirmed animated cape draws. This is not a test of an entire custom pack; full GTNH, shaders, multiplayer and release performance were not revalidated on this JAR.
+
+## WindwovenNH 0.1.6 — smoother collar contact (local preview)
+
+Tested JAR SHA-256: `4259742e25b360009d57d3a327b5282f3d8a33008a7d12298be8020637a3c1ef`. In the armored, wind-strength 1.5 comparison, the near grid went from 145 repeated flat collar-link detections to zero; the largest measured bend between neighboring collar links fell from 22.9° to 10.2°. Both grid tiers passed the loft, helmet-triangle clearance, and strain checks. The farther grid still has a visibly coarser bend; this test does not establish an equivalent curvature improvement there. Warmed solver and mesh generation continued to allocate zero bytes in the standalone check.
+
+An isolated Forge 1.7.10 replay with Java 25, UniMixins 0.3.2, and EvenMoBends `ad96976-snapshot` compared 0.1.5 and 0.1.6 at the same wind setting, including a standard helmet and chestplate. Front-of-neck pin position and the late compatibility patch remained intact; the side-view capture showed the cape curling upward without the same flat shoulder segment. No complete GTNH or shader-pack regression was run.
+
+## WindwovenNH 0.1.5 — flight wake and wind strength (local preview)
+
+Tested JAR SHA-256: `b37b51197056b375cea6df2deac6dbeb537c8141da63fd97217b3d77c2ccc50e`. The release JAR kept all 974,724 sampled non-flight coordinates bit-identical to 0.1.4 at default wind strength. Both mesh densities passed takeoff, descent, turn, stop, contact, and strain tests, including the maximum wind setting. The solver-and-mesh allocation check measured zero bytes across 1,500 warmed-up iterations, including flight transitions.
+
+An isolated Forge 1.7.10 replay exercised walking, sprinting, hover, slow and fast flight, climb, descent, turning and stopping in a test world. On Java 25 with UniMixins 0.3.2 and EvenMoBends `ad96976-snapshot`, the slow-flight hem opened about 0.56 blocks behind the shoulder seam at default wind (effectively zero on 0.1.4). At `1.5`, the sprint hem averaged 0.75 blocks back, compared with 0.58 at `1.0`. These are scripted torso-local distances, not guarantees for all poses. The Java 25 / UniMixins 0.3.1 and Java 8 / UniMixins 0.3.2 clients also passed. The Java 8 check without EvenMoBends used the regular cape hook. No replay recorded a head or torso proxy violation.
+
+A paired standalone input/solver/interpolation CPU test on Java 25 measured a median change of -0.6% to +4.2% across the two grids and tested motion profiles. Shorter timing runs were noisy; this is not a whole-client frame-time result. Full GTNH and shader packs were not retested.
+
+## WindwovenNH 0.1.4 — EvenMoBends loading fix (unreleased)
+
+Tested JAR SHA-256: `09f00636f1ce90a7e354a4fa6f2c4d911d78665214f7a61531e8bb1bbc331e39`. In an isolated Forge 1.7.10 instance, the published 0.1.3 JAR crashed during EvenMoBends startup on Java 8 and drew no cloth on Java 25. With 0.1.4, both clients started and drew animated cloth over the same synthetic cape. Every mod JAR was installed normally in `mods`, without classpath changes.
+
+- With EvenMoBends `ad96976-snapshot` and Salamander `0.0.2`, the late patch applied and drew cloth on Java 8u482 / UniMixins `0.3.2`, and on Java 25.0.2 with UniMixins `0.3.2` and `0.3.1`.
+- On Java 8, the default configurations of FalseTweaks `4.4.5`, FalsePatternLib `1.12.2`, Beddium `1.2.5-j8`, NotFine `0.4.0`, and SwanSong `1.3.7` worked together with shaders off. Without EvenMoBends, the regular cape hook still drew cloth. With `enabled=false`, the cape remained visible and all cloth counts stayed at zero. The empty scene recorded zero cloth steps and draws in all six runs.
+- The standalone cloth/config tests passed. Both detail levels matched 0.1.3 bit-for-bit over 974,724 sampled coordinates. The solver, render hooks and adapter classes in the two JARs are byte-for-byte identical; only when the optional adapter loads changed.
+
+This checks the reported loading regression, not the full reporter pack, the complete GTNH instance, shaders, or performance.
+
 ## WindwovenNH 0.1.3 — posed torso preview
 
 Tested JAR SHA-256: `e2bfbbb88a35bf8392df7d724f41564942da5289c1bea0d9dd8420d161aa4ba7`. The solver projects gravity, air and acceleration into the animated torso's frame; the shoulder seam and collision proxy remain attached to the body. The normal cape path gives 974,724 bit-identical solver coordinates against 0.1.1. The offline tests also cover a 70-degree tilted drape and rapid pitch/yaw/roll transitions in both grids, including pinned shoulders, chest clearance and finite interpolated links.

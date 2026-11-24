@@ -22,8 +22,11 @@ public final class ClothChecks {
             tiltedTorso(density);
             ledgeFall(density);
             verticalFlight(density);
+            flightWakeAndWindStrength(density);
             sustainedDive(density);
             obliqueShoulderLift(density);
+            collarContinuity(density);
+            posedCollarTransition(density);
             gustResponse(density);
         }
         regridAndReset();
@@ -50,12 +53,12 @@ public final class ClothChecks {
             BodyContact.projectHead(points, i, BodyContact.HEAD_TOP, BodyContact.HEAD_BOTTOM, 0, .9F);
         }
         close(points[5], BodyContact.HEAD_REAR, 1e-7F, "rear contact stops cloth inside the head proxy");
-        close(points[7], BodyContact.HEAD_BOTTOM, 1e-7F, "under-head contact does not pull cloth through the head");
+        close(points[7], BodyContact.lowerLip(points[8], BodyContact.HEAD_BOTTOM), 1e-7F, "under-head contact does not pull cloth through the head");
         for (int i = 9; i < points.length; i++) {
             close(points[i], original[i], 0, "head contact leaves clear air behind, beside and above it");
         }
         BodyContact.projectHead(original, 3, BodyContact.HEAD_TOP, BodyContact.HEAD_BOTTOM, 0, .098F);
-        close(original[4], 0, 1e-7F, "a short link near the collar cannot reach the back of the head");
+        close(original[4], BodyContact.lowerLip(original[5], BodyContact.HEAD_BOTTOM), 1e-7F, "a short link near the collar cannot reach the back of the head");
         expect(Math.abs(original[5] - original[2]) <= .09801F, "head contact does not lengthen the collar link");
     }
 
@@ -349,6 +352,72 @@ public final class ClothChecks {
         System.out.printf(Locale.ROOT, "%s free fall after 22 ticks: hem up %.3f, middle up %.3f blocks%n", d, hemLift, midLift);
     }
 
+    private static void flightWakeAndWindStrength(Density d) {
+        float still = rearAtSpeed(d, 0, false, 1);
+        float hover = rearAtSpeed(d, 0, true, 1);
+        float strongerHover = rearAtSpeed(d, 0, true, 1.5F);
+        float slow = rearAtSpeed(d, .12, true, 1);
+        float fast = rearAtSpeed(d, .65, true, 1);
+        float run = rearAtSpeed(d, .28, false, 1);
+        float strongerRun = rearAtSpeed(d, .28, false, 1.5F);
+        expect(hover > still + .10F && hover < .45F, "hover slightly opens the cape");
+        expect(strongerHover > hover + .08F, "wind strength increases the hover opening");
+        expect(slow > hover + .10F && fast > slow + .10F && fast < 1.18F, "actual speed increases the bounded wake");
+        expect(strongerRun > run + .08F, "wind strength increases the sprint trail");
+        close(rearAtSpeed(d, 0, true, 0), rearAtSpeed(d, .65, true, 0), .002F, "zero wind removes the steady external loads");
+
+        Flow flow = new Flow();
+        WovenCloth cape = new WovenCloth();
+        flow.update(0, 0, 0, 0, 0, false, true, 0F, false, true);
+        cape.initialize(d, flow);
+        for (int tick = 0; tick < 25; tick++) cape.advance(flow);
+        expect(cape.sample(1, SAMPLED) && SAMPLED[center(d, d.rows - 1) + 1] > .85F, "gravity is still active with no wind");
+        float lateralBeforeTurn = SAMPLED[center(d, d.rows - 1)];
+        flow.update(0, 0, 0, 16, 16, false, false, 0F, false, true);
+        cape.advance(flow);
+        verifyPose(cape, flow, false);
+        expect(Math.abs(SAMPLED[center(d, d.rows - 1)] - lateralBeforeTurn) > .009F, "zero wind retains turn transport");
+        float verticalBeforeLaunch = SAMPLED[center(d, d.rows - 1) + 1];
+        flow.update(0, .22, 0, 16, 0, false, true, 0F, false, true);
+        cape.advance(flow);
+        verifyPose(cape, flow, false);
+        expect(SAMPLED[center(d, d.rows - 1) + 1] > verticalBeforeLaunch + .01F, "zero wind retains takeoff inertia");
+
+        for (float strength : new float[] {1, 1.5F, 3}) {
+            flow.update(0, 0, 0, 0, 0, false, true, strength, false, true);
+            cape.initialize(d, flow);
+            for (int i = 0; i < 200; i++) {
+                float yaw = Math.max(0, Math.min(144, (i - 100) * 12));
+                double angle = Math.toRadians(yaw), speed = i < 30 ? .12 : i < 100 ? .65 : i < 130 ? .25 : 0;
+                flow.update(-Math.sin(angle) * speed, i < 30 ? .16 : i < 70 ? -.32 : 0,
+                    Math.cos(angle) * speed, yaw, i > 100 && i <= 112 ? 12 : 0, false, i < 130, strength, false, true);
+                cape.advance(flow);
+                verifyPose(cape, flow, false);
+                if (i < 6) expect(highestHem(d) < 0, "powered takeoff keeps the hem below the shoulder: " + strength + "/" + highestHem(d));
+            }
+            expect(SAMPLED[center(d, d.rows - 1) + 2] - flow.shoulder < .025F, "stopping and landing return to idle");
+        }
+        System.out.printf(Locale.ROOT, "%s mean hem opening: hover %.3f, slow %.3f, fast %.3f; sprint %.3f -> %.3f blocks%n",
+            d, hover, slow, fast, run, strongerRun);
+    }
+
+    private static float rearAtSpeed(Density d, double speed, boolean flying, float strength) {
+        Flow flow = new Flow();
+        WovenCloth cape = new WovenCloth();
+        flow.update(0, 0, speed, 0, 0, false, flying, strength, false, true);
+        cape.initialize(d, flow);
+        int hem = center(d, d.rows - 1);
+        float rear = 0;
+        for (int i = 0; i < 250; i++) {
+            cape.advance(flow);
+            if (i >= 150) {
+                verifyPose(cape, flow, false);
+                rear += SAMPLED[hem + 2] - flow.shoulder;
+            }
+        }
+        return rear / 100;
+    }
+
     private static void sustainedDive(Density d) {
         Flow air = new Flow();
         WovenCloth cloth = new WovenCloth();
@@ -464,7 +533,7 @@ public final class ClothChecks {
         float top = BodyContact.HEAD_TOP + offset, bottom = BodyContact.HEAD_BOTTOM;
         for (int i = d.columns * 3; i < d.sites * 3; i += 3) {
             expect(Math.abs(SAMPLED[i]) >= BodyContact.HEAD_HALF_WIDTH - 1e-6F
-                || SAMPLED[i + 1] <= top + 1e-6F || SAMPLED[i + 1] >= bottom - 1e-6F
+                || SAMPLED[i + 1] <= top + 1e-6F || SAMPLED[i + 1] >= BodyContact.lowerLip(SAMPLED[i + 2], bottom) - 1e-6F
                 || SAMPLED[i + 2] >= BodyContact.HEAD_REAR - 1e-6F, "do not cut through the head proxy");
         }
     }
@@ -516,6 +585,128 @@ public final class ClothChecks {
         expect(probe.vertices == 0, "the mesh check saw complete quads");
         System.out.printf(Locale.ROOT, "%s oblique fall: highest hem %.3f blocks above seam; %d lift ticks, %d asymmetric%n",
             d, peak, lofted, slant);
+    }
+
+    private static void collarContinuity(Density d) {
+        Flow air = new Flow();
+        WovenCloth cloth = new WovenCloth(917);
+        air.update(0, 0, 0, 0, 0, false, false, 1.5F, false, true);
+        cloth.initialize(d, air);
+        for (int tick = 0; tick < 130; tick++) cloth.advance(air);
+        ClothSurface mesh = new ClothSurface();
+        HeadMeshProbe helmet = new HeadMeshProbe();
+        int flat = 0, lofted = 0, stride = d.columns * 3;
+        double peakBend = 0, fall = 0;
+        float lastYaw = 0;
+        for (int tick = 0; tick <= 112; tick++) {
+            double brake = Math.max(0, Math.min(1, (103 - tick) / 13.0));
+            double forward = tick >= 20 ? .54 * brake : 0;
+            double side = tick < 32 ? 0 : (tick < 61 ? .28 : -.37) * brake;
+            fall = tick >= 42 && tick < 103 ? Math.max(-2.26, (fall - .076) * .985) : 0;
+            float yaw = Math.max(0, Math.min(tick - 62, 12)) * 4.5F;
+            double rad = Math.toRadians(yaw);
+            air.update(Math.cos(rad) * side - Math.sin(rad) * forward, fall * brake,
+                Math.sin(rad) * side + Math.cos(rad) * forward, yaw, yaw - lastYaw, false, false, 1.5F, false, true);
+            lastYaw = yaw;
+            cloth.advance(air);
+            verifyPose(cloth, air, false);
+            if (tick < 60) continue;
+            if (highestHem(d) > .10F) {
+                lofted++;
+                expect(mesh.prepare(cloth, .5F), "lofted collar remains renderable");
+                mesh.writeQuads(helmet);
+            }
+            expect(cloth.sample(.5F, SAMPLED), "interpolated collar is finite");
+            for (int col = 0; col < d.columns; col++) {
+                int flatLinks = 0;
+                double previous = 0;
+                for (int row = 1; row <= Math.min(5, d.rows - 1); row++) {
+                    int node = row * stride + col * 3, parent = node - stride;
+                    double rear = SAMPLED[node + 2] - SAMPLED[parent + 2];
+                    double angle = Math.toDegrees(Math.atan2(rear, SAMPLED[node + 1] - SAMPLED[parent + 1]));
+                    if (Math.abs(SAMPLED[node + 1]) < .001F && SAMPLED[node + 2] < .332F && rear > .018) {
+                        if (++flatLinks == 2) flat++;
+                    } else flatLinks = 0;
+                    if (row >= 2 && row <= 4) {
+                        double bend = Math.abs(angle - previous);
+                        peakBend = Math.max(peakBend, Math.min(bend, 360 - bend));
+                    }
+                    previous = angle;
+                }
+            }
+        }
+        expect(lofted >= 6 && helmet.vertices == 0, "the collar test must exercise lofted render geometry");
+        if (d == Density.DETAIL) {
+            expect(flat == 0, "adjacent collar links must not form a rigid shelf: " + flat);
+            expect(peakBend < 15, "bend must be distributed across the near collar: " + peakBend);
+        }
+        System.out.printf(Locale.ROOT, "%s collar at wind 1.5: %d lofted ticks; %d planar shelves; peak local bend %.1f degrees%n",
+            d, lofted, flat, peakBend);
+    }
+
+    /** The upright replay never stressed the joint where the lower lip meets the rear face. */
+    private static void posedCollarTransition(Density d) {
+        ClothSurface mesh = new ClothSurface();
+        HeadMeshProbe helmet = new HeadMeshProbe();
+        Flow air = new Flow();
+        CapeFrame pose = new CapeFrame();
+        WovenCloth cloth = new WovenCloth(917);
+        int stride = d.columns * 3;
+        float[] pitches = {-66, -35, 0};
+        float[] limits = d == Density.DETAIL ? new float[] {37, 30, 17} : new float[] {56, 51, 51};
+        float[] partials = {0, .25F, .5F, .75F, 1};
+        for (int scenario = 0; scenario < pitches.length; scenario++) {
+            float pitch = pitches[scenario];
+            boolean flying = pitch == 0;
+            double peak = 0;
+            float lift = 0;
+            for (int tick = 0; tick < 230; tick++) {
+                double brake = Math.max(0, Math.min(1, (148 - tick) / 18.0));
+                double fall = -Math.min(2.24, .075 * Math.max(0, tick - 80)) * brake;
+                double forward = tick < 64 || tick >= 148 ? 0 : flying ? .08 : .53;
+                double side = tick < 110 || tick >= 148 ? 0 : -.3;
+                air.update(side, fall, forward, 0, 0, false, flying, 1.5F, false, true);
+                pose.setRoot((float) (pitch * Math.min(1, Math.abs(fall) * 3)), 0, (float) (side * 14));
+                air.pose(pose);
+                if (tick == 0) cloth.initialize(d, air);
+                else cloth.advance(air);
+                verifyPose(cloth, air, false);
+                if (tick < 80) continue;
+                for (float partial : partials) {
+                    expect(cloth.sample(partial, SAMPLED), "the posed collar remains finite across the tick");
+                    headClearance(d, air.squat);
+                    float up = highestHem(d);
+                    lift = Math.max(up, lift);
+                    if (up <= .10F) continue;
+                    expect(mesh.prepare(cloth, partial), "lofted posed collar remains renderable");
+                    mesh.writeQuads(helmet);
+                    for (int row = 1; row <= 4; row++) {
+                        for (int col = 0; col < d.columns; col++) {
+                            int node = row * stride + col * 3;
+                            peak = Math.max(peak, warpBend(node - stride, node, node + stride));
+                        }
+                    }
+                }
+            }
+            expect(lift > .15F && highestHem(d) < -.55F, "the posed cape must still lift and settle: " + lift);
+            expect(helmet.vertices == 0, "each sampled posed mesh has complete quads");
+            expect(peak < limits[scenario], "posed collar transition bends too sharply: " + d + " / " + pitch + " = " + peak);
+            System.out.printf(Locale.ROOT, "%s posed collar (%+.0f deg): peak bend %.1f degrees, lift %.3f blocks%n",
+                d, pitch, peak, lift);
+        }
+    }
+
+    private static double warpBend(int before, int joint, int after) {
+        double dot = 0, u2 = 0, v2 = 0;
+        for (int axis = 0; axis < 3; axis++) {
+            float u = SAMPLED[joint + axis] - SAMPLED[before + axis];
+            float v = SAMPLED[after + axis] - SAMPLED[joint + axis];
+            dot += u * v;
+            u2 += u * u;
+            v2 += v * v;
+        }
+        expect(u2 > 1e-8 && v2 > 1e-8, "the collar links must not collapse");
+        return Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, dot / Math.sqrt(u2 * v2)))));
     }
 
     /** Sample both triangles of every rendered quad against the solid of the upright test head.
@@ -726,7 +917,8 @@ public final class ClothChecks {
 
     private static void cycle(WovenCloth cloth, ClothSurface mesh, Flow wind, CountSink sink, int n) {
         for (int i = 0; i < n; i++) {
-            wind.update(.4 * Math.sin(i * .11), 1.4 * Math.sin(i * .09), .39, 21, 4, false, false, false);
+            wind.update(.4 * Math.sin(i * .11), 1.4 * Math.sin(i * .09), .39, 21, 4, false, i % 80 < 40,
+                1.0F, false, false);
             cloth.advance(wind);
             if (mesh.prepare(cloth, .4F)) mesh.writeQuads(sink);
         }

@@ -1,0 +1,8 @@
+{
+  "required": false,
+  "minVersion": "0.8.7",
+  "compatibilityLevel": "JAVA_8",
+  "package": "io.github.windwovennh.mixin",
+  "refmap": "mixins.windwovennh.refmap.json",
+  "injectors": { "defaultRequire": 0 }
+}

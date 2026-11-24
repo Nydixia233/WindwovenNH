@@ -13,11 +13,12 @@ function Read-TextEntry($Zip, [string]$Name) {
 }
 $z = [IO.Compression.ZipFile]::OpenRead($jar)
 try {
-    $classes = '^io/github/windwovennh/(WindwovenNH|LegacyConfig|client/(BendsAttachment(\$Links)?|ModelSpace|PlayerCloths(\$Garment)?)|cloth/(AeroPreset|BodyContact|CapeFrame|ClothSurface(\$VertexOut)?|Density|Flow|WovenCloth(\$(Seam|Weave))?)|mixin/(CapeCall|BatchStatus|EvenMoBendsCapeCall))\.class$'
-    $resources = @('META-INF/MANIFEST.MF','META-INF/LICENSE','mcmod.info','mixins.windwovennh.json','mixins.windwovennh.refmap.json')
+    $classes = '^io/github/windwovennh/(WindwovenNH|LegacyConfig|EvenMoBendsLateLoader|client/(BendsAttachment(\$Links)?|ModelSpace|PlayerCloths(\$Garment)?)|cloth/(AeroPreset|BodyContact|CapeFrame|ClothSurface(\$VertexOut)?|Density|Flow|WovenCloth(\$(Seam|Weave))?)|mixin/(CapeCall|BatchStatus|EvenMoBendsCapeCall))\.class$'
+    $resources = @('META-INF/MANIFEST.MF','META-INF/LICENSE','mcmod.info','mixins.windwovennh.json','mixins.windwovennh.late.json','mixins.windwovennh.refmap.json')
     $files = @($z.Entries | Where-Object Name | ForEach-Object FullName)
     $other = @($files | Where-Object { $_ -cnotmatch $classes -and $_ -cnotin $resources })
     if ($other.Count -or 'io/github/windwovennh/WindwovenNH.class' -cnotin $files -or
+        'io/github/windwovennh/EvenMoBendsLateLoader.class' -cnotin $files -or
         'io/github/windwovennh/LegacyConfig.class' -cnotin $files -or 'io/github/windwovennh/mixin/CapeCall.class' -cnotin $files -or
         'io/github/windwovennh/mixin/EvenMoBendsCapeCall.class' -cnotin $files -or
         'io/github/windwovennh/client/BendsAttachment.class' -cnotin $files) {
@@ -30,7 +31,10 @@ try {
     }
     if ((Read-TextEntry $z 'META-INF/MANIFEST.MF') -notmatch '(?m)^MixinConfigs: mixins\.windwovennh\.json\r?$') { throw 'Wrong Mixin manifest.' }
     $mixin = Read-TextEntry $z 'mixins.windwovennh.json' | ConvertFrom-Json
-    if ('EvenMoBendsCapeCall' -cnotin $mixin.client -or $mixin.package -cne 'io.github.windwovennh.mixin' -or $mixin.refmap -cne 'mixins.windwovennh.refmap.json' -or
+    $late = Read-TextEntry $z 'mixins.windwovennh.late.json' | ConvertFrom-Json
+    if (($mixin.client -join ',') -cne 'CapeCall,BatchStatus' -or $mixin.package -cne 'io.github.windwovennh.mixin' -or
+        $mixin.refmap -cne 'mixins.windwovennh.refmap.json' -or $late.package -cne $mixin.package -or $late.refmap -cne $mixin.refmap -or
+        $late.mixins -or $late.client -or $late.server -or
         (Read-TextEntry $z 'mixins.windwovennh.refmap.json') -match 'io[/\.]github[/\.]trailcloth') { throw 'Wrong Mixin namespace/refmap.' }
     $license = Get-Content -LiteralPath (Join-Path $root 'LICENSE') -Raw
     if ((Read-TextEntry $z 'META-INF/LICENSE').Trim() -cne $license.Trim()) { throw 'Incorrect copyright/license payload' }
