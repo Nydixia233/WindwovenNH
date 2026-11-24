@@ -4,6 +4,6 @@
   "compatibilityLevel": "JAVA_8",
   "package": "io.github.windwovennh.mixin",
   "refmap": "mixins.windwovennh.refmap.json",
-  "client": ["CapeCall", "BatchStatus", "EvenMoBendsCapeCall"],
+  "client": ["CapeCall", "BatchStatus"],
   "injectors": { "defaultRequire": 0 }
 }

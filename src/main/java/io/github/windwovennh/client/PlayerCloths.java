@@ -36,6 +36,7 @@ public final class PlayerCloths {
     private final Minecraft game = Minecraft.getMinecraft();
     private final Thread owner = Thread.currentThread();
     private final boolean full;
+    private final float windStrength;
     private final IdentityHashMap<AbstractClientPlayer, Garment> lookup = new IdentityHashMap<>();
     private final ArrayList<Garment> visible = new ArrayList<>();
     private final Flow wind = new Flow();
@@ -47,13 +48,14 @@ public final class PlayerCloths {
     private WorldClient scene;
     private int ticks;
 
-    private PlayerCloths(boolean full) {
+    private PlayerCloths(boolean full, float windStrength) {
         this.full = full;
+        this.windStrength = windStrength;
     }
 
-    public static void enable(boolean full) {
+    public static void enable(boolean full, float windStrength) {
         if (addon != null) return;
-        PlayerCloths service = new PlayerCloths(full);
+        PlayerCloths service = new PlayerCloths(full, windStrength);
         addon = service;
         FMLCommonHandler.instance().bus().register(service);
     }
@@ -201,7 +203,7 @@ public final class PlayerCloths {
         }
         wind.update(reset ? 0 : p.posX - g.x, reset ? 0 : p.posY - g.y, reset ? 0 : p.posZ - g.z, facing,
             reset ? 0 : MathHelper.wrapAngleTo180_float(facing - g.heading), p.isInsideOfMaterial(Material.water),
-            p.isSneaking(), p.getCurrentArmor(2) != null);
+            p.capabilities.isFlying, windStrength, p.isSneaking(), p.getCurrentArmor(2) != null);
         // The render path supplies pose only; integration still happens once per client tick.
         if (g.posed) wind.pose(g.pose);
         if (reset) g.cloth.initialize(density, wind);

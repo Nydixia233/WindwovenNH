@@ -10,9 +10,9 @@ WindwovenNH 让你已有的披风像布一样动。身体转向时，布尾会�
 
 下载 [windwovennh-0.1.1.jar](https://github.com/Nydixia233/WindwovenNH/releases/download/0.1.1/windwovennh-0.1.1.jar)，放进客户端的 `mods` 文件夹。服务器不用装。
 
-实测环境是 **GTNH 2.9.0**（Minecraft Forge 1.7.10）、Java 25，以及整合包自带的 UniMixins 和 Angelica 2.2.43（OpenGL 模式）。关光影和开 Complementary Reimagined + Euphoria Patches 都测过。其他整合包、OptiFine 和其他渲染后端没测过。
+稳定版实测环境是 **GTNH 2.9.0**（Minecraft Forge 1.7.10）、Java 25，以及整合包自带的 UniMixins 和 Angelica 2.2.43（OpenGL 模式）。关光影和开 Complementary Reimagined + Euphoria Patches 都测过。其他整合包、OptiFine 和其他渲染后端没测过。
 
-**想试 EvenMoBends 适配？** 可以用 [0.1.3 预发布版](https://github.com/Nydixia233/WindwovenNH/releases/tag/0.1.3)。EvenMoBends 负责画人物时，披风挂在肩上，跳跃前倾或飞行时不会整片跟着身体硬转。不装 EvenMoBends 也能用。GTNH 里的 Galacticraft 仍可能接管人物绘制；WindwovenNH 不会替换人物渲染器，也不会启用身体动画。实测范围见[测试报告](RELEASE-QA.md)。
+**装了 EvenMoBends？** 可以试试 [0.1.7 预览版](https://github.com/Nydixia233/WindwovenNH/releases/tag/0.1.7)。它修复了 0.1.3 加载顺序不对、披风可能不动的问题。换掉旧版 WindwovenNH JAR，不要同时装两份。不装 EvenMoBends 也能用。GTNH 里的 Galacticraft 仍可能接管人物绘制；WindwovenNH 不会更换人物渲染器，也不会启用身体动画。实测范围见[测试报告](RELEASE-QA.md)。
 
 ## 设置
 
@@ -21,6 +21,7 @@ WindwovenNH 让你已有的披风像布一样动。身体转向时，布尾会�
 - **`BALANCED`（默认）**：24 格内多算一些细节，24 到 48 格降低细节，再远就用原版披风。
 - **`FULL`**：只要游戏还在画披风，就用最高细节。
 - **`enabled=false`**：改回游戏原本的披风动画。
+- **`windStrength=1.0`（0.0–3.0，0.1.7 预览版）**：默认风力。飞行或疾跑时披风太贴身，可以试 `1.3`–`1.8`；`0.0` 会关闭外部风压，但保留重力和布料惯性。
 
 披风能绕开常见的头盔和胸甲，异形盔甲仍可能穿模。这不是一个提帧模组。
 
